@@ -55,7 +55,7 @@ func (e *ErrorResponse) Parse(err error) {
 	if validationErrors, ok := err.(validator.ValidationErrors); ok {
 		var messages []string
 		for _, err := range validationErrors {
-			messages = append(messages, formatValidationError(err.Field(), err.Param(), err.Tag()))
+			messages = append(messages, formatValidationError(err.Field(), err.Tag(), err.Param()))
 		}
 		e.Code = http.StatusUnprocessableEntity
 		e.Message = "validation error"
@@ -64,7 +64,7 @@ func (e *ErrorResponse) Parse(err error) {
 		return
 	}
 	if isInvalidJSON(err) {
-		e.Code = http.StatusBadRequest
+		e.Code = http.StatusUnprocessableEntity
 		e.Message = "invalid JSON"
 		e.Err = err
 		return
@@ -73,7 +73,7 @@ func (e *ErrorResponse) Parse(err error) {
 	var timeParseErr *time.ParseError
 	if errors.As(err, &timeParseErr) {
 		e.Code = http.StatusUnprocessableEntity
-		e.Message = fmt.Sprintf("invalid timestamp: %s", expectedRFC3339)
+		e.Message = fmt.Sprintf("invalid timestamp %q: %s", timeParseErr.Value, expectedRFC3339)
 		e.Err = err
 		return
 	}
@@ -83,7 +83,7 @@ func (e *ErrorResponse) Parse(err error) {
 	if errors.As(err, &validationErr) {
 		var messages []string
 		for _, detail := range validationErr.Errors {
-			messages = append(messages, formatValidationError(detail.Type, detail.Field, ""))
+			messages = append(messages, formatValidationError(detail.Field, detail.Type, ""))
 		}
 		e.Code = http.StatusUnprocessableEntity
 		e.Message = "validation error"
