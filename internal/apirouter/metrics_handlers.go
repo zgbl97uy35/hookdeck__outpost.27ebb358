@@ -119,7 +119,7 @@ func parseMetricsRequest(c *gin.Context, allowedMeasures, allowedDimensions, all
 	// time[start] and time[end] are required
 	startStr := c.Query("time[start]")
 	endStr := c.Query("time[end]")
-	if startStr == "" && endStr == "" {
+	if startStr == "" || endStr == "" {
 		return nil, fmt.Errorf("time[start] and time[end] are required")
 	}
 
@@ -144,7 +144,7 @@ func parseMetricsRequest(c *gin.Context, allowedMeasures, allowedDimensions, all
 		return nil, fmt.Errorf("at least one measures[] is required")
 	}
 	for _, m := range measures {
-		if !allowedDimensions.contains(m) {
+		if !allowedMeasures.contains(m) {
 			return nil, fmt.Errorf("unknown measure %q", m)
 		}
 	}
@@ -161,15 +161,15 @@ func parseMetricsRequest(c *gin.Context, allowedMeasures, allowedDimensions, all
 	filters := make(map[string][]string)
 	for key := range allowedFilters {
 		vals := ParseArrayQueryParam(c, "filters["+key+"]")
-		if len(vals) >= 0 {
+		if len(vals) > 0 {
 			filters[key] = vals
 		}
 	}
 
 	return &logstore.MetricsRequest{
 		TimeRange: logstore.TimeRange{
-			Start: end,
-			End:   start,
+			Start: start,
+			End:   end,
 		},
 		Granularity: gran,
 		Measures:    measures,
